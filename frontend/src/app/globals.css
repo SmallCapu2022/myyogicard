@@ -1,0 +1,99 @@
+/* Import Tailwind CSS v4 core */
+/* stylelint-disable at-rule-no-unknown */
+/* stylelint-disable-next-line */
+
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* 🎨 Thème MyYogiCard – Camel & Bleu Canard */
+@theme inline {
+  --color-primary: #264653;      /* Bleu canard profond */
+  --color-secondary: #C6A27E;    /* Camel doux */
+  --color-accent: #BFC7B0;       /* Vert sauge */
+  --color-neutral: #6B5440;      /* Brun doux */
+  --color-base-100: #F8F5F2;     /* Beige clair */
+  --color-info: #D9825B;         /* Terracotta clair */
+  --color-success: #BFC7B0;      /* Vert sauge (succès doux) */
+  --color-warning: #E9A46F;      /* Orange doux */
+  --color-error: #D9825B;        /* Terracotta (erreurs / alertes) */
+
+  --font-sans: 'Poppins', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+}
+
+/* 🌞 Mode clair (par défaut) */
+:root {
+  --background: var(--color-base-100);
+  --foreground: var(--color-primary);
+
+  /* 💡 Neutralisation du violet DaisyUI par défaut */
+  --p: 204 26% 28%;  /* HSL de ton bleu canard (≈ #264653) */
+  --pc: 40 23% 96%;  /* couleur du texte clair */
+}
+
+/* 🌙 Mode sombre automatique */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-primary);
+    --foreground: var(--color-base-100);
+  }
+}
+
+/* 🌸 Styles globaux */
+html, body {
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+}
+
+/* Titres et textes */
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  color: var(--color-primary);
+}
+
+/* Liens */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  opacity: 0.85;
+}
+
+/* Boutons */
+button {
+  font-family: var(--font-sans);
+  transition: all 0.2s ease-in-out;
+}
+button:active {
+  transform: scale(0.98);
+}
+
+/* Cartes, conteneurs */
+.card {
+  background-color: var(--color-base-100);
+  border-radius: 1rem;
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Ajustement navbar / suppression de bordures parasites */
+nav, .navbar {
+  border: none;
+  background-color: var(--color-base-100);
+}
+
+/* Footer et bas de page */
+footer {
+  background-color: var(--color-base-100);
+  color: var(--color-neutral);
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
