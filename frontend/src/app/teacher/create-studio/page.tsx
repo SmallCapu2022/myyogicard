@@ -18,7 +18,7 @@ export default function CreateStudio() {
 
     setLoading(true);
     try {
-      await createStudio(user, name, location);
+      await createStudio(user.uid, name, location);
       setMessage("✅ Studio créé avec succès !");
       setTimeout(() => router.push("/teacher/studio-dashboard"), 1500);
     } catch (err: any) {

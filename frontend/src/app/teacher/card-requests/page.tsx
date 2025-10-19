@@ -18,15 +18,14 @@ export default function CardRequestsPage() {
     if (!userData?.studioId) return;
     async function fetchRequests() {
       const list = await getStudioRequests(userData.studioId);
-      // Trie pour voir les "pending" d'abord
       setRequests(list.sort((a, b) => (a.status > b.status ? 1 : -1)));
       setLoading(false);
     }
     fetchRequests();
   }, [userData]);
 
-  const handleApprove = async (id: string, remaining: number) => {
-    await approveCardRequest(id, remaining);
+  const handleApprove = async (id: string) => {
+    await approveCardRequest(id);
     setRequests((r) =>
       r.map((req) => (req.id === id ? { ...req, status: "accepted" } : req))
     );
@@ -45,11 +44,14 @@ export default function CardRequestsPage() {
     setMessage("💳 Paiement confirmé — carte activée !");
   };
 
-  if (loading) return <p className="text-center mt-10">Chargement des demandes...</p>;
+  if (loading)
+    return <p className="text-center mt-10">Chargement des demandes...</p>;
 
   return (
     <main className="min-h-screen bg-base-100 text-neutral p-8 flex flex-col items-center">
-      <h1 className="text-3xl font-serif text-tealdeep mb-6">Demandes de cartes 📋</h1>
+      <h1 className="text-3xl font-serif text-tealdeep mb-6">
+        Demandes de cartes 📋
+      </h1>
 
       {message && <p className="text-sage mb-4">{message}</p>}
 
@@ -69,6 +71,10 @@ export default function CardRequestsPage() {
               }`}
             >
               <p>
+                <strong>Élève :</strong>{" "}
+                {req.studentName || "Inconnu 🧘‍♀️"}
+              </p>
+              <p>
                 <strong>Type :</strong> {req.type}
               </p>
               <p>
@@ -85,9 +91,9 @@ export default function CardRequestsPage() {
                       : req.status === "paid"
                       ? "text-success"
                       : "text-error"
-                  }`}
+                  } font-semibold`}
                 >
-                  {req.status}
+                  {req.status.toUpperCase()}
                 </span>
               </p>
 
@@ -95,9 +101,7 @@ export default function CardRequestsPage() {
                 {req.status === "pending" && (
                   <>
                     <button
-                      onClick={() =>
-                        handleApprove(req.id, req.type.includes("10") ? 10 : 5)
-                      }
+                      onClick={() => handleApprove(req.id)}
                       className="btn btn-primary flex-1"
                     >
                       ✅ Accepter
@@ -110,7 +114,6 @@ export default function CardRequestsPage() {
                     </button>
                   </>
                 )}
-
                 {req.status === "accepted" && (
                   <button
                     onClick={() => handleMarkPaid(req.id)}

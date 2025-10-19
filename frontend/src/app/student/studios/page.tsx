@@ -1,31 +1,50 @@
 "use client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { getAllStudios } from "@/lib/firestore";
 
-export default function StudiosList() {
-  const [studios, setStudios] = useState<any[]>([]);
+import { useEffect, useState } from "react";
+import { getAllStudios, Studio } from "@/lib/firestore";
+import Link from "next/link";
+
+export default function StudiosListPage() {
+  const [studios, setStudios] = useState<Studio[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllStudios().then(setStudios);
+    async function load() {
+      const list = await getAllStudios();
+      setStudios(list);
+      setLoading(false);
+    }
+    load();
   }, []);
 
-  return (
-    <main className="min-h-screen bg-base-100 text-neutral p-8 flex flex-col items-center">
-      <h1 className="text-3xl font-serif text-tealdeep mb-6">Studios de yoga 🪷</h1>
+  if (loading) return <p className="text-center mt-10">Chargement des studios...</p>;
 
-      <div className="grid gap-4 w-full max-w-lg">
-        {studios.map((s) => (
-          <Link
-            key={s.id}
-            href={`/student/studios/${s.id}`}
-            className="block bg-beige border border-sage rounded-xl p-4 hover:shadow-md transition"
-          >
-            <h2 className="text-xl font-serif text-tealdeep">{s.name}</h2>
-            <p className="text-sm text-brownsoft">{s.location}</p>
-          </Link>
-        ))}
-      </div>
+  return (
+    <main className="min-h-screen bg-base-100 text-neutral p-8">
+      <h1 className="text-3xl font-serif text-tealdeep mb-8 text-center">
+        Studios partenaires 🪷
+      </h1>
+
+      {studios.length === 0 ? (
+        <p className="text-center text-brownsoft">Aucun studio enregistré pour le moment.</p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {studios.map((studio) => (
+            <div
+              key={studio.id}
+              className="card bg-beige border border-sage shadow-sm hover:shadow-md transition p-6"
+            >
+              <h2 className="text-xl font-serif text-tealdeep mb-2">{studio.name}</h2>
+              <p className="text-sm text-brownsoft mb-4">
+                {studio.cardTypes?.length || 0} formules disponibles
+              </p>
+              <Link href={`/student/studios/${studio.id}`}>
+                <button className="btn btn-primary w-full">Voir le studio</button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

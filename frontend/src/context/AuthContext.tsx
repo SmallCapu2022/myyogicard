@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, ReactNode, useEffect } from "react";
 import useAuth from "@/hooks/useAuth";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type AuthContextType = ReturnType<typeof useAuth>;
 
@@ -10,41 +10,31 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, userData, loading, ...rest } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
+  // 🔹 Redirections automatiques selon le rôle
   useEffect(() => {
     if (loading) return;
 
-    // Liste des pages publiques où l'on ne redirige pas
-    const publicRoutes = ["/", "/student/login", "/teacher/login", "/admin/login"];
-
-    // 🔸 Si pas connecté et pas déjà sur une page publique → retour à l’accueil
-    if (!user && !publicRoutes.includes(pathname)) {
-      router.push("/");
+    if (!user) {
+      router.push("/"); // page d’accueil ou choix espace
       return;
     }
 
-    // 🔹 Si connecté, on redirige selon le rôle
-    if (user && userData) {
-      if (userData.role === "student" && pathname.startsWith("/student/login")) {
-        router.push("/student/dashboard");
-      } else if (
-        userData.role === "teacher" &&
-        userData.isOwner &&
-        pathname.startsWith("/teacher/login")
-      ) {
-        router.push("/teacher/studio-dashboard");
-      } else if (
-        userData.role === "teacher" &&
-        !userData.isOwner &&
-        pathname.startsWith("/teacher/login")
-      ) {
-        router.push("/teacher/teacher-dashboard");
-      } else if (userData.role === "admin" && pathname.startsWith("/admin/login")) {
-        router.push("/admin/dashboard");
+    if (userData) {
+      switch (userData.role) {
+        case "student":
+          router.push("/student/dashboard");
+          break;
+        case "teacher":
+          if (userData.isOwner) router.push("/teacher/studio-dashboard");
+          else router.push("/teacher/teacher-dashboard");
+          break;
+        case "admin":
+          router.push("/admin/dashboard");
+          break;
       }
     }
-  }, [user, userData, loading, router, pathname]);
+  }, [user, userData, loading, router]);
 
   return (
     <AuthContext.Provider value={{ user, userData, loading, ...rest }}>
@@ -55,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuthContext() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuthContext must be used inside AuthProvider");
+  if (!context) {
+    throw new Error("useAuthContext must be used inside AuthProvider");
+  }
   return context;
 }
