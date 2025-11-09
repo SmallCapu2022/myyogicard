@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthContext } from "@/context/AuthContext";
@@ -6,46 +7,16 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getStudioRequests, listenToStudioRequests } from "@/lib/firestore";
+import { useState } from "react";
 
 export default function Navbar() {
   const { userData, user } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
 
-  // 🔔 Vérifie les demandes en attente pour un prof en temps réel
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    // Réinitialiser le compteur si l'utilisateur n'est pas connecté ou n'est pas un professeur
-    if (!user || userData?.role !== "teacher" || !userData?.studios?.length) {
-      setPendingCount(0);
-      return () => {}; // Retourne une fonction de nettoyage vide
-    }
-
-    // Mettre en place l'écouteur en temps réel
-    const studioId = userData.studios[0];
-    unsubscribe = listenToStudioRequests(studioId, (requests) => {
-      const pending = requests.filter((r) => r.status === "pending").length;
-      setPendingCount(pending);
-    });
-
-    // Fonction de nettoyage qui sera appelée lors du démontage ou de la déconnexion
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      setPendingCount(0);
-    };
-  }, [userData, user]);
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/");
-  };
+  // Pour l'instant, on désactive le compteur temps réel
+  const pendingCount = 0;
 
   const getLinks = () => {
     if (!userData) return [];
@@ -84,6 +55,11 @@ export default function Navbar() {
 
   const links = getLinks();
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/");
+  };
+
   return (
     <nav className="navbar bg-base-100 border-b border-sage shadow-sm fixed top-0 w-full z-50 px-6 py-3 flex justify-between items-center">
       {/* Logo */}
@@ -98,7 +74,7 @@ export default function Navbar() {
         <span className="text-xl font-serif text-tealdeep">MyYogiCard</span>
       </Link>
 
-      {/* Liens */}
+      {/* Liens desktop */}
       <div className="hidden md:flex gap-6 items-center justify-center flex-1">
         {links.map((link) => (
           <Link
@@ -115,11 +91,11 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* Profil + Déconnexion */}
+      {/* Profil + Déconnexion desktop */}
       <div className="hidden md:flex items-center gap-4 shrink-0">
         {userData && (
           <Link
-            href="/profile" // 🔹 vers page globale maintenant
+            href="/profile"
             className="text-tealdeep font-medium hover:underline"
           >
             {userData.firstName || "Mon profil"}
