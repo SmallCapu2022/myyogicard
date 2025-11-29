@@ -6,19 +6,22 @@ import {
   approveCardRequest,
   rejectCardRequest,
   markCardAsPaid,
+  type CardRequest,
 } from "@/lib/firestore";
 
 export default function CardRequestsPage() {
   const { userData } = useAuthContext();
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<CardRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!userData?.studioId) return;
+    const studioId = userData?.studios?.[0];
+    if (!studioId) return;
+    const sid = studioId;
     async function fetchRequests() {
-      const list = await getStudioRequests(userData.studioId);
-      setRequests(list.sort((a, b) => (a.status > b.status ? 1 : -1)));
+  const list = await getStudioRequests(sid);
+  setRequests(list.sort((a: CardRequest, b: CardRequest) => (a.status > b.status ? 1 : -1)));
       setLoading(false);
     }
     fetchRequests();

@@ -7,17 +7,26 @@ import {
   useEffect,
   useState,
 } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  User,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 type Role = "student" | "teacher" | "admin";
 
 export interface UserData {
-  uid: string;
+  // standard Firestore-style id
+  id: string;
   email: string | null;
   firstName?: string;
-  role?: Role;
+  lastName?: string;
+  role?: Role | string;
   isOwner?: boolean;
   studios?: string[];
 }
@@ -26,6 +35,16 @@ type AuthContextType = {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
+  signup: (
+    email: string,
+    password: string,
+    role?: string,
+    firstName?: string,
+    lastName?: string
+  ) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setUserData: (data: UserData | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,21 +55,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Abonnement Firebase Auth uniquement, sans Firestore
+  // ───────────── signup sans Firestore ─────────────
+  const signup = async (
+    email: string,
+    password: string,
+    role: string = "student",
+    firstName: string = "",
+    lastName: string = ""
+  ) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Optionnel: mettre le nom dans Firebase Auth
+    const displayName = `${firstName} ${lastName}`.trim();
+    if (displayName) {
+      await updateProfile(cred.user, { displayName });
+    }
+
+    const data: UserData = {
+      id: cred.user.uid,
+      email: cred.user.email,
+      firstName,
+      lastName,
+      role,
+      isOwner: false,
+      studios: [],
+    };
+
+    setUser(cred.user);
+    setUserData(data);
+  };
+
+  // ───────────── login ─────────────
+  const login = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  // ───────────── logout ─────────────
+  const logout = async () => {
+    await signOut(auth);
+    setUser(null);
+    setUserData(null);
+    router.push("/");
+  };
+
+  // ───────────── suivi de session Auth ─────────────
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        const basicUserData: UserData = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          firstName: firebaseUser.displayName || undefined,
-          role: undefined,        // à rebrancher via Firestore plus tard
-          isOwner: false,
-          studios: [],
-        };
-        setUserData(basicUserData);
+        setUserData((prev) => {
+          if (prev) return prev;
+          return {
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            firstName: firebaseUser.displayName || undefined,
+            role: undefined,
+            isOwner: false,
+            studios: [],
+          };
+        });
       } else {
         setUserData(null);
       }
@@ -61,23 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  // Redirection minimale: si pas connecté → home
-  useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.push("/");
-      return;
-    }
-
-    // Si tu veux rebrancher les redirections par rôle plus tard:
-    // if (userData?.role === "student") router.push("/student/dashboard");
-    // etc.
-  }, [user, userData, loading, router]);
-
   const value: AuthContextType = {
     user,
     userData,
     loading,
+    signup,
+    login,
+    logout,
+    setUserData,
   };
 
   return (

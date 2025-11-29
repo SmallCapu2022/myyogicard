@@ -23,8 +23,8 @@ export default function TeacherSignup() {
     try {
       await signup(email, password, "teacher", firstName, lastName);
       router.push("/teacher/choose-studio");
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de la création du compte");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? `❌ Erreur: ${err.message}` : "❌ Erreur lors de la création du compte");
     } finally {
       setLoading(false);
     }

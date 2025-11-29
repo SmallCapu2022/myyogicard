@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getStudio, requestCard } from "@/lib/firestore";
+import { getStudio, requestCard, type Studio } from "@/lib/firestore";
 import { useAuthContext } from "@/context/AuthContext";
 
 export default function StudioDetailsPage() {
@@ -9,7 +9,7 @@ export default function StudioDetailsPage() {
   const params = useParams();
   const studioId = params?.id as string;
 
-  const [studio, setStudio] = useState<any>(null);
+  const [studio, setStudio] = useState<Studio | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -28,9 +28,14 @@ export default function StudioDetailsPage() {
       setMessage("⚠️ Vous devez être connecté pour demander une carte.");
       return;
     }
+    const sid = studio?.id;
+    if (!sid) {
+      setMessage("⚠️ Studio introuvable.");
+      return;
+    }
     await requestCard(
       userData.id,
-      studio.id,
+      sid,
       type,
       price,
       `${userData.firstName || ""} ${userData.lastName || ""}`.trim()
@@ -68,7 +73,7 @@ export default function StudioDetailsPage() {
       <h3 className="text-xl font-semibold mb-4">🎟️ Cartes disponibles</h3>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {studio.cardTypes?.map((card: any, index: number) => (
+  {studio.cardTypes?.map((card, index: number) => (
           <div
             key={index}
             className="card bg-base-100 border border-sage shadow-md"

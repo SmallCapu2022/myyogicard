@@ -21,9 +21,9 @@ export default function CreateStudio() {
       await createStudio(user.uid, name, location);
       setMessage("✅ Studio créé avec succès !");
       setTimeout(() => router.push("/teacher/studio-dashboard"), 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setMessage("❌ Erreur : impossible de créer le studio.");
+      setMessage(err instanceof Error ? `❌ Erreur: ${err.message}` : "❌ Erreur : impossible de créer le studio.");
     } finally {
       setLoading(false);
     }

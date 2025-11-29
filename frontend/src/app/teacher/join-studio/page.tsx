@@ -15,12 +15,12 @@ export default function JoinStudio() {
     if (!user) return;
 
     try {
-      await joinStudio(user, studioId);
+      await joinStudio(user.uid, studioId);
       setMessage("✅ Vous avez rejoint le studio !");
       setTimeout(() => router.push("/teacher/teacher-dashboard"), 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setMessage("❌ Studio introuvable ou erreur Firestore.");
+      setMessage(err instanceof Error ? `❌ Erreur: ${err.message}` : "❌ Studio introuvable ou erreur Firestore.");
     }
   };
 

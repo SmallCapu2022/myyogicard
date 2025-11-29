@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useAuthContext } from "@/context/AuthContext";
-import { updateProfile, updatePassword } from "firebase/auth";
+import { updatePassword } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { db } from "@/lib/firebaseClient";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfilePage() {
-  const { user, userData, logout } = useAuthContext();
+  const { userData, logout } = useAuthContext();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState(userData?.firstName || "");
@@ -27,7 +28,7 @@ export default function ProfilePage() {
     setMessage("");
 
     try {
-      const ref = doc(db, "users", userData.id);
+  const ref = doc(db, "users", userData.id!);
       await updateDoc(ref, {
         firstName,
         lastName,

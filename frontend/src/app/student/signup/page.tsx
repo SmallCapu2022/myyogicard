@@ -23,8 +23,10 @@ export default function StudentSignup() {
     try {
       await signup(email, password, "student", firstName, lastName);
       router.push("/student/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Erreur lors de la création du compte");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? `❌ Erreur: ${err.message}` : "❌ Erreur lors de l'inscription."
+      );
     } finally {
       setLoading(false);
     }

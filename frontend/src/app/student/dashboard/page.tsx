@@ -1,41 +1,69 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@/context/AuthContext";
-import { getUserCards, getStudio } from "@/lib/firestore";
+import type { Card } from "@/lib/firestore";
+
+type CardWithStudio = Card & { studioName?: string };
 
 export default function StudentDashboard() {
   const { userData, logout } = useAuthContext();
-  const [cards, setCards] = useState<any[]>([]);
+  const [cards, setCards] = useState<CardWithStudio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Id sécurisé, jamais null dans l'effet
+  const userId = userData?.id ?? null;
 
   useEffect(() => {
-    if (!userData?.id) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    // Capturer une copie immuable de l'ID utilisateur pour que TypeScript
+    // sache que la valeur ne changera pas à l'intérieur de l'async function.
+    const uid = userId;
+
+    let cancelled = false;
 
     async function loadCards() {
-      const userCards = await getUserCards(userData.id);
-
-      // Associe chaque carte à son studio
-      const enriched = await Promise.all(
-        userCards.map(async (card) => {
-          const studio = await getStudio(card.studioId);
-          return {
-            ...card,
-            studioName: studio?.name || "Studio inconnu",
-          };
-        })
-      );
-
-      setCards(enriched);
-      setLoading(false);
+      try {
+        const res = await fetch(`/api/user/cards?userId=${encodeURIComponent(uid)}`);
+        if (!res.ok) throw new Error("Erreur lors du chargement des cartes");
+        const data = await res.json();
+        if (!cancelled) setCards(data as CardWithStudio[]);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : String(err);
+          setError(message || "Erreur lors du chargement des cartes");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
 
     loadCards();
-  }, [userData]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   if (loading) {
     return (
       <main className="flex items-center justify-center h-screen text-neutral">
         Chargement de vos cartes...
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="flex items-center justify-center h-screen text-neutral">
+        <p className="text-terracotta text-sm">{error}</p>
       </main>
     );
   }
@@ -74,8 +102,8 @@ export default function StudentDashboard() {
                         (card.type.includes("10") ? 10 : 5)) *
                       100
                     }
-                    max="100"
-                  ></progress>
+                    max={100}
+                  />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   Statut :{" "}

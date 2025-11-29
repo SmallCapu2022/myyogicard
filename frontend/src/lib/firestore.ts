@@ -1,19 +1,8 @@
-import {
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  query,
-  where,
-  updateDoc,
-  arrayUnion,
-  serverTimestamp,
-  onSnapshot,
-  QuerySnapshot,
-  DocumentData,
-} from "firebase/firestore";
-import { db } from "./firebase";
+// Defer importing the Firebase client SDK to runtime to avoid pulling
+// client-only modules into server bundles. Use the `client()` helper
+// inside functions to load the Firestore helpers and `db` lazily.
+import type { QuerySnapshot, DocumentData, Timestamp } from "firebase/firestore/lite";
+
 
 // ───────────────────────────────
 // 🔹 Interfaces typées
@@ -26,12 +15,13 @@ export interface Card {
   type: string;
   remaining: number;
   status: "active" | "expired" | "pending" | "paid";
-  createdAt?: any;
+  createdAt?: Timestamp | null;
 }
 
 export interface Studio {
   id: string;
   name: string;
+  location?: string;
   ownerId: string;
   teachers?: string[];
   students?: string[];
@@ -47,7 +37,7 @@ export interface CardRequest {
   type: string;
   price: number;
   status: "pending" | "accepted" | "paid" | "rejected";
-  createdAt?: any;
+  createdAt?: Timestamp | null;
 }
 
 export interface User {
@@ -60,12 +50,20 @@ export interface User {
   isOwner?: boolean;
 }
 
+async function client(): Promise<any> {
+  const firestore = await import("firebase/firestore/lite");
+  const firebaseClient = await import("./firebaseClient");
+  const db = await firebaseClient.getDb();
+  return { ...firestore, db } as any;
+}
+
 // ───────────────────────────────
 // 👤 UTILISATEURS
 // ───────────────────────────────
 
 /** Récupère un utilisateur complet */
 export async function getUser(userId: string) {
+  const { doc, getDoc, db } = await client();
   const ref = doc(db, "users", userId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
@@ -74,6 +72,7 @@ export async function getUser(userId: string) {
 
 /** Ajoute un studio à la liste d’un élève */
 export async function addStudioToUser(userId: string, studioId: string) {
+  const { doc, updateDoc, arrayUnion, db } = await client();
   const ref = doc(db, "users", userId);
   await updateDoc(ref, { studios: arrayUnion(studioId) });
 }
@@ -89,7 +88,8 @@ export async function createStudio(
   location: string
 ) {
   const ownerId = typeof owner === 'string' ? owner : owner.id;
-  
+  const { collection, addDoc, doc, updateDoc, arrayUnion, serverTimestamp, db } = await client();
+
   const studiosRef = collection(db, "studios");
   const docRef = await addDoc(studiosRef, {
     name,
@@ -114,6 +114,7 @@ export async function createStudio(
 
 /** Rejoint un studio existant */
 export async function joinStudio(userId: string, studioId: string) {
+  const { doc, updateDoc, arrayUnion, db } = await client();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, { studios: arrayUnion(studioId) });
 
@@ -123,19 +124,18 @@ export async function joinStudio(userId: string, studioId: string) {
 
 /** Récupère tous les studios */
 export async function getAllStudios() {
+  const { getDocs, collection, db } = await client();
   const snap = await getDocs(collection(db, "studios"));
-  return snap.docs.map((d) => ({ ...(d.data() as Studio), id: d.id }));
+  return snap.docs.map((d: any) => ({ ...(d.data() as Studio), id: d.id }));
 }
 
 /** Récupère un studio spécifique */
 export async function getStudio(studioId: string) {
-  console.log("Fetching studio with ID:", studioId);
+  const { doc, getDoc, db } = await client();
   const ref = doc(db, "studios", studioId);
   const snap = await getDoc(ref);
-  console.log("Studio snapshot exists:", snap.exists());
   if (!snap.exists()) return null;
   const studio = { ...(snap.data() as Studio), id: snap.id };
-  console.log("Studio data:", studio);
   return studio;
 }
 
@@ -145,6 +145,7 @@ export async function updateStudioCardTypes(
   cardTypes: { label: string; sessions: number; price: number }[],
   acceptSingleClass: boolean
 ) {
+  const { doc, updateDoc, db } = await client();
   const ref = doc(db, "studios", studioId);
   await updateDoc(ref, { cardTypes, acceptSingleClass });
 }
@@ -161,6 +162,7 @@ export async function requestCard(
   price: number,
   studentName: string
 ) {
+  const { addDoc, collection, serverTimestamp, db } = await client();
   await addDoc(collection(db, "cardRequests"), {
     studentId,
     studioId,
@@ -174,9 +176,10 @@ export async function requestCard(
 
 /** Liste toutes les demandes d'un studio */
 export async function getStudioRequests(studioId: string) {
+  const { query, collection, where, getDocs, db } = await client();
   const q = query(collection(db, "cardRequests"), where("studioId", "==", studioId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as CardRequest), id: d.id }));
+  return snap.docs.map((d: any) => ({ ...(d.data() as CardRequest), id: d.id }));
 }
 
 /** Écoute les demandes d'un studio en temps réel */
@@ -184,27 +187,35 @@ export function listenToStudioRequests(
   studioId: string,
   onChange: (requests: CardRequest[]) => void
 ) {
-  const q = query(collection(db, "cardRequests"), where("studioId", "==", studioId));
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    const requests = snapshot.docs.map((d) => ({ ...(d.data() as CardRequest), id: d.id }));
-    onChange(requests);
-  });
+  // Real-time listeners are client-only by nature. We still lazily load
+  // the SDK, but note this function should be called from client components.
+  return (async () => {
+    const { query, collection, where, onSnapshot, db } = await client();
+    const q = query(collection(db, "cardRequests"), where("studioId", "==", studioId));
+    return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+  const requests = snapshot.docs.map((d: any) => ({ ...(d.data() as CardRequest), id: d.id }));
+      onChange(requests);
+    });
+  })();
 }
 
 /** Accepte une demande de carte */
 export async function approveCardRequest(requestId: string) {
+  const { doc, updateDoc, db } = await client();
   const ref = doc(db, "cardRequests", requestId);
   await updateDoc(ref, { status: "accepted" });
 }
 
 /** Refuse une demande */
 export async function rejectCardRequest(requestId: string) {
+  const { doc, updateDoc, db } = await client();
   const ref = doc(db, "cardRequests", requestId);
   await updateDoc(ref, { status: "rejected" });
 }
 
 /** Marque une demande comme payée et crée la carte active */
 export async function markCardAsPaid(requestId: string) {
+  const { doc, getDoc, query, collection, where, getDocs, addDoc, serverTimestamp, updateDoc, db } = await client();
   const reqRef = doc(db, "cardRequests", requestId);
   const reqSnap = await getDoc(reqRef);
   if (!reqSnap.exists()) throw new Error("Demande introuvable");
@@ -244,35 +255,38 @@ export async function markCardAsPaid(requestId: string) {
 
 /** Récupère toutes les cartes d’un élève (multi-studios) */
 export async function getUserCards(studentId: string) {
+  const { query, collection, where, getDocs, db } = await client();
   const q = query(collection(db, "cards"), where("studentId", "==", studentId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as Card), id: d.id }));
+  return snap.docs.map((d: any) => ({ ...(d.data() as Card), id: d.id }));
 }
 
 /** Récupère toutes les cartes liées à un studio */
 export async function getCardsByStudio(studioId: string) {
+  const { query, collection, where, getDocs, db } = await client();
   const q = query(collection(db, "cards"), where("studioId", "==", studioId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as Card), id: d.id }));
+  return snap.docs.map((d: any) => ({ ...(d.data() as Card), id: d.id }));
 }
 
 /** Compte les cartes par statut */
 export async function countCardsByStatus(studioId: string) {
   const cards = await getCardsByStudio(studioId);
   return {
-    active: cards.filter((c) => c.status === "active").length,
-    expired: cards.filter((c) => c.status === "expired").length,
-    pending: cards.filter((c) => c.status === "pending").length,
+    active: cards.filter((c: Card) => c.status === "active").length,
+    expired: cards.filter((c: Card) => c.status === "expired").length,
+    pending: cards.filter((c: Card) => c.status === "pending").length,
   };
 }
 
 /** Liste les élèves appartenant à un studio */
 export async function getStudentsByStudio(studioId: string) {
+  const { query, collection, where, getDocs, db } = await client();
   const q = query(
     collection(db, "users"),
     where("studios", "array-contains", studioId), // ✅ adaptation multi-studio
     where("role", "==", "student")
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as User), id: d.id }));
+  return snap.docs.map((d: any) => ({ ...(d.data() as User), id: d.id }));
 }

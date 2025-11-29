@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyAvhvaq8qUMtloi56YIESv7qATdDLDJYco",
   authDomain: "myyogiapp-578f9.firebaseapp.com",
   projectId: "myyogiapp-578f9",
-  storageBucket: "myyogiapp-578f9.appspot.com", 
+  storageBucket: "myyogiapp-578f9.appspot.com",
   appId: "1:350181487945:web:699f269d0892f6d7595698",
 };
 

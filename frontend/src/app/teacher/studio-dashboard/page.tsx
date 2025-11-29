@@ -21,8 +21,7 @@ export default function StudioDashboard() {
   const { userData } = useAuthContext();
   const studioId = userData?.studios?.[0]; // ✅ multi-studio : 1er studio comme "principal"
   
-  console.log("Dashboard userData:", userData);
-  console.log("Dashboard studioId:", studioId);
+  // Debug logs removed for production readiness
 
   const [studio, setStudio] = useState<Studio | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +43,6 @@ export default function StudioDashboard() {
   useEffect(() => {
     async function loadStudioData() {
       try {
-        console.log("Loading studio data...", { studioId, userData });
         if (!studioId) {
           console.warn("No studio ID available");
           setLoading(false);
@@ -53,7 +51,7 @@ export default function StudioDashboard() {
 
         // Charger le studio en premier
         const s = await getStudio(studioId);
-        console.log("Studio loaded:", s);
+  // studio loaded
         
         if (s) {
           setStudio(s);
@@ -67,7 +65,7 @@ export default function StudioDashboard() {
               countCardsByStatus(studioId),
               getStudioRequests(studioId),
             ]);
-            console.log("Additional data loaded:", { students: studs, counts, requests: reqs });
+            // additional data loaded
             
             setStudents(studs);
             setStats(counts);
